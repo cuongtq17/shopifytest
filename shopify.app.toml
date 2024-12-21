@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "0e8af92cd52a0b5fbb16163339ed5058"
-application_url = "https://perception-creations-lender-wing.trycloudflare.com"
+application_url = "https://shots-pays-saying-makeup.trycloudflare.com"
 embedded = true
 name = "flagship-interview"
 handle = "flagship-interview"
@@ -17,15 +17,19 @@ api_version = "2024-10"
   topics = [ "app/scopes_update" ]
   uri = "/webhooks/app/scopes_update"
 
+  [[webhooks.subscriptions]]
+  topics = [ "orders/create" ]
+  uri = "/webhooks/app/orders_create"
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://perception-creations-lender-wing.trycloudflare.com/auth/callback",
-  "https://perception-creations-lender-wing.trycloudflare.com/auth/shopify/callback",
-  "https://perception-creations-lender-wing.trycloudflare.com/api/auth/callback"
+  "https://shots-pays-saying-makeup.trycloudflare.com/auth/callback",
+  "https://shots-pays-saying-makeup.trycloudflare.com/auth/shopify/callback",
+  "https://shots-pays-saying-makeup.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
