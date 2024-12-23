@@ -1,11 +1,3 @@
-# Shopify App Template - Remix
-
-This is a template for building a [Shopify app](https://shopify.dev/docs/apps/getting-started) using the [Remix](https://remix.run) framework.
-
-Rather than cloning this repo, you can use your preferred package manager and the Shopify CLI with [these steps](https://shopify.dev/docs/apps/getting-started/create).
-
-Visit the [`shopify.dev` documentation](https://shopify.dev/docs/api/shopify-app-remix) for more details on the Remix app package.
-
 ## Quick start
 
 ### Prerequisites
@@ -16,47 +8,11 @@ Before you begin, you'll need the following:
 2. **Shopify Partner Account**: [Create an account](https://partners.shopify.com/signup) if you don't have one.
 3. **Test Store**: Set up either a [development store](https://help.shopify.com/en/partners/dashboard/development-stores#create-a-development-store) or a [Shopify Plus sandbox store](https://help.shopify.com/en/partners/dashboard/managing-stores/plus-sandbox-store) for testing your app.
 
-### Setup
-
-If you used the CLI to create the template, you can skip this section.
-
-Using yarn:
-
-```shell
-yarn install
-```
-
-Using npm:
-
-```shell
-npm install
-```
-
-Using pnpm:
-
-```shell
-pnpm install
-```
-
-### Local Development
-
-Using yarn:
-
-```shell
-yarn dev
-```
-
-Using npm:
 
 ```shell
 npm run dev
 ```
 
-Using pnpm:
-
-```shell
-pnpm run dev
-```
 
 Press P to open the URL to your app. Once you click install, you can start development.
 
@@ -226,7 +182,7 @@ pnpm run deploy
 
 ### My shop-specific webhook subscriptions aren't updated
 
-If you are registering webhooks in the `afterAuth` hook, using `shopify.registerWebhooks`, you may find that your subscriptions aren't being updated.  
+If you are registering webhooks in the `afterAuth` hook, using `shopify.registerWebhooks`, you may find that your subscriptions aren't being updated.
 
 Instead of using the `afterAuth` hook, the recommended approach is to declare app-specific webhooks in the `shopify.app.toml` file.  This approach is easier since Shopify will automatically update changes to webhook subscriptions every time you run `deploy` (e.g: `npm run deploy`).  Please read these guides to understand more:
 
