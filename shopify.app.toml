@@ -1,40 +1,41 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "0e8af92cd52a0b5fbb16163339ed5058"
-application_url = "https://shots-pays-saying-makeup.trycloudflare.com"
+application_url = "https://applies-creator-slow-bench.trycloudflare.com"
 embedded = true
 name = "flagship-interview"
 handle = "flagship-interview"
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "betbetterbusiness.myshopify.com"
+include_config_on_deploy = true
 
 [webhooks]
 api_version = "2024-10"
 
   [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled" ]
-  uri = "/webhooks/app/uninstalled"
+  topics = [ "orders/create" ]
+  uri = "/webhooks/app/orders_create"
 
   [[webhooks.subscriptions]]
   topics = [ "app/scopes_update" ]
   uri = "/webhooks/app/scopes_update"
 
   [[webhooks.subscriptions]]
-  topics = [ "orders/create" ]
-  uri = "/webhooks/app/orders_create"
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
+scopes = "read_customers,read_orders,read_products,write_customers,write_orders,write_products"
 
 [auth]
 redirect_urls = [
-  "https://shots-pays-saying-makeup.trycloudflare.com/auth/callback",
-  "https://shots-pays-saying-makeup.trycloudflare.com/auth/shopify/callback",
-  "https://shots-pays-saying-makeup.trycloudflare.com/api/auth/callback"
+  "https://applies-creator-slow-bench.trycloudflare.com/auth/callback",
+  "https://applies-creator-slow-bench.trycloudflare.com/auth/shopify/callback",
+  "https://applies-creator-slow-bench.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
 embedded = false
-
-[build]
-dev_store_url = "betbetterbusiness.myshopify.com"
-automatically_update_urls_on_dev = true

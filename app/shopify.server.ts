@@ -30,10 +30,19 @@ const shopify = shopifyApp({
       deliveryMethod: DeliveryMethod.Http,
       callbackUrl: "/webhooks/app/orders_create",
     },
+    ORDERS_EDIT: {
+      deliveryMethod: DeliveryMethod.Http,
+      callbackUrl: "/webhooks/app/orders_create",
+    },
   },
   hooks: {
     afterAuth: async ({ session }) => {
-      shopify.registerWebhooks({ session });
+      try {
+        const webhookResponse = await shopify.registerWebhooks({ session });
+        console.log("Webhooks registered:", webhookResponse);
+      } catch (error) {
+        console.error("Webhook registration failed:", error);
+      }
     },
   },
 });

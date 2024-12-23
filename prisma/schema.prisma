@@ -32,16 +32,37 @@ model Session {
 }
 
 model Order {
-  id                 Int      @id @default(autoincrement())
-  shopifyOrderId     String   @unique
+  id                 Int       @id @default(autoincrement())
+  shopifyOrderId     String    @unique
   orderNumber        Int
-  totalPrice         String
+  totalPrice         Float
   paymentGateway     String?
   customerEmail      String?
   customerFullName   String?
   customerAddress    String?
-  tags               String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
   shopId             String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  tags               OrderTag[]
+}
+
+
+model Tag {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  createdAt DateTime   @default(now())
+  orders    OrderTag[] // Relation to the reference table
+}
+
+model OrderTag {
+  id          Int     @id @default(autoincrement())
+  orderId     Int
+  tagId       Int
+  order       Order   @relation(fields: [orderId], references: [id])
+  tag         Tag     @relation(fields: [tagId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@unique([orderId, tagId])
 }

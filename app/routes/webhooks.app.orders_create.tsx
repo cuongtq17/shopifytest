@@ -1,34 +1,79 @@
-import type { ActionFunction } from "@remix-run/node";
+import type { ActionFunction, ActionFunctionArgs } from "@remix-run/node";
 import db from "../db.server";
-import { authenticate } from "app/shopify.server";
 
-export const action: ActionFunction = async ({ request }) => {
-  const { payload, topic, shop } = await authenticate.webhook(request);
-
-  const shopId = request.headers.get("x-shopify-shop-domain");
-  console.log(`Received ${topic} webhook for ${shop}`);
-
-  console.log("Payload", payload);
-
+export const action: ActionFunction = async ({
+  request,
+}: ActionFunctionArgs) => {
+  console.log("in webhook.app.orders_create");
   try {
+    const shopId = request.headers.get("x-shopify-shop-domain") || "";
+    const topic = request.headers.get("x-shopify-topic");
+    const shop = request.headers.get("x-shopify-shop-domain");
+
+    const payload = await request.json();
+    console.log("payload", payload);
+    console.log(`Received ${topic} webhook for ${shop}`);
     const orderData = {
-      shopifyOrderId: payload.id.toString(),
+      shopifyOrderId: payload.id?.toString(),
       orderNumber: payload.order_number,
-      totalPrice: payload.total_price,
-      paymentGateway: payload.payment_gateway_names[0] || null,
-      customerEmail: payload.customer?.email,
+      totalPrice: isFinite(parseFloat(payload.total_price))
+        ? parseFloat(payload.total_price)
+        : 0,
+      paymentGateway: payload.payment_gateway_names?.[0] || null,
+      customerEmail: payload.customer?.email || null,
       customerFullName:
-        `${payload.customer?.first_name} ${payload.customer?.last_name}`.trim(),
-      customerAddress: payload.shipping_address.address1 || "",
-      tags: payload.tags || [],
+        `${payload.customer?.first_name || ""} ${payload.customer?.last_name || ""}`.trim() ||
+        null,
+      customerAddress: payload.shipping_address?.address1 || null,
       shopId: shopId,
     };
 
-    await db.order.create({
-      data: orderData,
+    const order = await db.order.upsert({
+      where: { shopifyOrderId: orderData.shopifyOrderId },
+      update: orderData,
+      create: orderData,
     });
 
-    return Response.json({ success: true });
+    const tags: string[] = payload.tags
+      ? payload.tags.split(",").map((tag: string) => tag.trim())
+      : [];
+
+    const tagRecords = await Promise.all(
+      tags.map(async (tagName) => {
+        return db.tag.upsert({
+          where: { name: tagName },
+          update: {},
+          create: { name: tagName },
+        });
+      }),
+    );
+
+    const existingTags = await db.orderTag.findMany({
+      where: { orderId: order.id },
+    });
+
+    const existingTagIds = existingTags.map((tag) => tag.tagId);
+    const newTagIds = tagRecords.map((tag) => tag.id);
+
+    await db.orderTag.deleteMany({
+      where: {
+        orderId: order.id,
+        tagId: { notIn: newTagIds },
+      },
+    });
+
+    const newOrderTags = newTagIds
+      .filter((tagId) => !existingTagIds.includes(tagId))
+      .map((tagId) => ({
+        orderId: order.id,
+        tagId: tagId,
+      }));
+
+    await db.orderTag.createMany({
+      data: newOrderTags,
+    });
+
+    return Response.json({ success: true, data: order }, { status: 200 });
   } catch (error) {
     console.error("Webhook processing error:", error);
     return Response.json(
