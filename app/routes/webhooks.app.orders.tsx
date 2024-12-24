@@ -1,33 +1,42 @@
 import type { ActionFunction, ActionFunctionArgs } from "@remix-run/node";
 import db from "../db.server";
+import {
+  toCreateOrderDto,
+  toUpdateOrderDto,
+} from "app/transformers/toCreateOrderDto";
+import { authenticate } from "app/shopify.server";
 
 export const action: ActionFunction = async ({
   request,
 }: ActionFunctionArgs) => {
-  console.log("in webhook.app.orders_create");
   try {
-    const shopId = request.headers.get("x-shopify-shop-domain") || "";
+    console.log("Start processing request", request);
+    const { admin, session, payload } = await authenticate.webhook(request);
+    console.log("admin", admin);
+    console.log("session", session);
     const topic = request.headers.get("x-shopify-topic");
     const shop = request.headers.get("x-shopify-shop-domain");
 
-    const payload = await request.json();
-    console.log("payload", payload);
     console.log(`Received ${topic} webhook for ${shop}`);
-    const orderData = {
-      shopifyOrderId: payload.id?.toString(),
-      orderNumber: payload.order_number,
-      totalPrice: isFinite(parseFloat(payload.total_price))
-        ? parseFloat(payload.total_price)
-        : 0,
-      paymentGateway: payload.payment_gateway_names?.[0] || null,
-      customerEmail: payload.customer?.email || null,
-      customerFullName:
-        `${payload.customer?.first_name || ""} ${payload.customer?.last_name || ""}`.trim() ||
-        null,
-      customerAddress: payload.shipping_address?.address1 || null,
-      shopId: shopId,
-    };
+    console.log("payload", payload);
+    let orderData;
+    switch (topic) {
+      case "orders/create":
+        orderData = toCreateOrderDto(payload);
+        break;
+      case "orders/edited":
+        orderData = toUpdateOrderDto(payload);
+        break;
+      case "orders/updated":
+        orderData = toCreateOrderDto(payload);
+        break;
 
+      default:
+        break;
+    }
+    if (!orderData) return;
+
+    console.log("orderData", orderData);
     const order = await db.order.upsert({
       where: { shopifyOrderId: orderData.shopifyOrderId },
       update: orderData,

@@ -18,13 +18,16 @@ import { authenticate } from "../shopify.server";
 import exportToCSV from "app/utils";
 import type { Order, Tag } from "@prisma/client";
 import Multiselect from "app/components/MultiSelect";
+import { updateOrderTags } from "app/services/tag.service";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
+    const { session } = await authenticate.admin(request);
+
     const formData = await request.formData();
     const actionType = formData.get("actionType");
     const orderId = parseInt(formData.get("orderId") as string, 10);
-    const tag = formData.get("tag")?.toString();
+    const tag = formData.get("tag")?.toString() || "";
 
     if (!actionType || !orderId) {
       throw new Error("Missing required parameters");
@@ -35,77 +38,89 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       throw new Error("Order not found");
     }
 
-    if (actionType === "addTag") {
-      const createdTag = await db.tag.upsert({
-        where: { name: tag },
-        update: {},
-        create: { name: tag },
-      });
+    switch (actionType) {
+      case "addTag":
+        const createdTag = await db.tag.upsert({
+          where: { name: tag },
+          update: {},
+          create: { name: tag },
+        });
 
-      await db.orderTag.upsert({
-        where: { orderId_tagId: { orderId, tagId: createdTag.id } },
-        update: {},
-        create: { orderId, tagId: createdTag.id },
-      });
+        await db.orderTag.upsert({
+          where: { orderId_tagId: { orderId, tagId: createdTag.id } },
+          update: {},
+          create: { orderId, tagId: createdTag.id },
+        });
 
-      return new Response(JSON.stringify({ success: true, tag }), {
-        status: 200,
-      });
+        const orderTags = await db.orderTag.findMany({
+          include: { tag: true },
+        });
+        const tags = orderTags.map((orderTag) => orderTag.tag.name);
+
+        updateOrderTags(session, order.shopifyOrderId, tags);
+
+        return new Response(JSON.stringify({ success: true, tag }), {
+          status: 200,
+        });
+      case "removeTag":
+        const existingTag = await db.tag.findUnique({ where: { name: tag } });
+        if (!existingTag) {
+          throw new Error("Tag not found");
+        }
+
+        await db.orderTag.delete({
+          where: { orderId_tagId: { orderId, tagId: existingTag.id } },
+        });
+
+        const remaining = await db.orderTag.findMany({
+          include: { tag: true },
+        });
+        const latestTags = remaining.map((orderTag) => orderTag.tag.name);
+
+        updateOrderTags(session, order.shopifyOrderId, latestTags);
+
+        return new Response(JSON.stringify({ success: true, tag }), {
+          status: 200,
+        });
+      case "updateOrder":
+        if (!orderId) {
+          throw new Error("Missing order ID for updateOrder");
+        }
+
+        const updates: Partial<Order> = {};
+        if (formData.has("orderNumber")) {
+          updates.orderNumber = parseInt(
+            formData.get("orderNumber") as string,
+            10,
+          );
+        }
+        if (formData.has("totalPrice")) {
+          updates.totalPrice = parseFloat(formData.get("totalPrice") as string);
+        }
+        if (formData.has("paymentGateway")) {
+          updates.paymentGateway = formData.get("paymentGateway")?.toString();
+        }
+        if (formData.has("customerEmail")) {
+          updates.customerEmail = formData.get("customerEmail")?.toString();
+        }
+        if (formData.has("customerFullName")) {
+          updates.customerFullName = formData
+            .get("customerFullName")
+            ?.toString();
+        }
+        if (formData.has("customerAddress")) {
+          updates.customerAddress = formData.get("customerAddress")?.toString();
+        }
+        await db.order.update({
+          where: { id: orderId },
+          data: updates,
+        });
+
+        return new Response(JSON.stringify({ success: true }), { status: 200 });
+      default:
+        throw new Error("Invalid action type");
     }
-
-    if (actionType === "removeTag") {
-      const existingTag = await db.tag.findUnique({ where: { name: tag } });
-      if (!existingTag) {
-        throw new Error("Tag not found");
-      }
-
-      await db.orderTag.delete({
-        where: { orderId_tagId: { orderId, tagId: existingTag.id } },
-      });
-
-      return new Response(JSON.stringify({ success: true, tag }), {
-        status: 200,
-      });
-    }
-
-    if (actionType === "updateOrder") {
-      const orderId = parseInt(formData.get("orderId") as string, 10);
-      if (!orderId) {
-        throw new Error("Missing order ID for updateOrder");
-      }
-
-      const updates: Partial<Order> = {};
-      if (formData.has("orderNumber")) {
-        updates.orderNumber = parseInt(
-          formData.get("orderNumber") as string,
-          10,
-        );
-      }
-      if (formData.has("totalPrice")) {
-        updates.totalPrice = parseFloat(formData.get("totalPrice") as string);
-      }
-      if (formData.has("paymentGateway")) {
-        updates.paymentGateway = formData.get("paymentGateway")?.toString();
-      }
-      if (formData.has("customerEmail")) {
-        updates.customerEmail = formData.get("customerEmail")?.toString();
-      }
-      if (formData.has("customerFullName")) {
-        updates.customerFullName = formData.get("customerFullName")?.toString();
-      }
-      if (formData.has("customerAddress")) {
-        updates.customerAddress = formData.get("customerAddress")?.toString();
-      }
-      await db.order.update({
-        where: { id: orderId },
-        data: updates,
-      });
-
-      return new Response(JSON.stringify({ success: true }), { status: 200 });
-    }
-
-    throw new Error("Invalid action type");
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error handling tag action:", error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
@@ -248,6 +263,8 @@ export default function Index() {
       <IndexTable.Cell>
         {editingRows[order.id] ? (
           <TextField
+            label=""
+            autoComplete="off"
             value={
               updatedOrders[order.id]?.paymentGateway ||
               order.paymentGateway ||
@@ -258,12 +275,14 @@ export default function Index() {
             }
           />
         ) : (
-          <Text>{order.paymentGateway || "-"}</Text>
+          <Text as="dd">{order.paymentGateway || "-"}</Text>
         )}
       </IndexTable.Cell>{" "}
       <IndexTable.Cell>
         {editingRows[order.id] ? (
           <TextField
+            label=""
+            autoComplete="off"
             value={
               updatedOrders[order.id]?.customerEmail ||
               order.customerEmail ||
@@ -274,12 +293,14 @@ export default function Index() {
             }
           />
         ) : (
-          <Text>{order.customerEmail || "-"}</Text>
+          <Text as="dd">{order.customerEmail || "-"}</Text>
         )}
       </IndexTable.Cell>{" "}
       <IndexTable.Cell>
         {editingRows[order.id] ? (
           <TextField
+            label=""
+            autoComplete="off"
             value={
               updatedOrders[order.id]?.customerFullName ||
               order.customerFullName ||
@@ -290,12 +311,14 @@ export default function Index() {
             }
           />
         ) : (
-          <Text>{order.customerFullName || "-"}</Text>
+          <Text as="dd">{order.customerFullName || "-"}</Text>
         )}
       </IndexTable.Cell>{" "}
       <IndexTable.Cell>
         {editingRows[order.id] ? (
           <TextField
+            label=""
+            autoComplete="off"
             value={
               updatedOrders[order.id]?.customerAddress ||
               order.customerAddress ||
@@ -306,7 +329,7 @@ export default function Index() {
             }
           />
         ) : (
-          <Text>{order.customerAddress || "-"}</Text>
+          <Text as="dd">{order.customerAddress || "-"}</Text>
         )}
       </IndexTable.Cell>{" "}
       <IndexTable.Cell>

@@ -17,22 +17,23 @@ const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
-  future: {
-    unstable_newEmbeddedAuthStrategy: true,
-    removeRest: true,
-  },
-  ...(process.env.SHOP_CUSTOM_DOMAIN
-    ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] }
-    : {}),
 
   webhooks: {
     ORDERS_CREATE: {
       deliveryMethod: DeliveryMethod.Http,
-      callbackUrl: "/webhooks/app/orders_create",
+      callbackUrl: "/webhooks/app/orders",
     },
-    ORDERS_EDIT: {
+    ORDERS_EDITED: {
       deliveryMethod: DeliveryMethod.Http,
-      callbackUrl: "/webhooks/app/orders_create",
+      callbackUrl: "/webhooks/app/orders",
+    },
+    ORDERS_UPDATED: {
+      deliveryMethod: DeliveryMethod.Http,
+      callbackUrl: "/webhooks/app/orders",
+    },
+    APP_UNINSTALLED: {
+      deliveryMethod: DeliveryMethod.Http,
+      callbackUrl: "/webhooks/app/uninstalled",
     },
   },
   hooks: {
@@ -45,6 +46,13 @@ const shopify = shopifyApp({
       }
     },
   },
+  future: {
+    unstable_newEmbeddedAuthStrategy: true,
+    removeRest: true,
+  },
+  ...(process.env.SHOP_CUSTOM_DOMAIN
+    ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] }
+    : {}),
 });
 
 export default shopify;

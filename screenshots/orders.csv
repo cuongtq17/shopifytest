@@ -1,0 +1,5 @@
+id,shopifyOrderId,orderNumber,totalPrice,paymentGateway,customerEmail,customerFullName,customerAddress,shopId,createdAt,updatedAt,tags
+1,9800656912678,1031,330,manual,abc@gmai.com,john,123 address 123,,2024-12-24T07:07:20.693Z,2024-12-24T07:28:47.200Z,"1234144,tagsFromStore"
+3,9800805777702,1037,121,manual,,,,,2024-12-24T07:11:32.061Z,2024-12-24T07:17:08.771Z,"1234144,testing,tests,test,test123,tagsFromStore"
+23,9800817049894,1038,3500,manual,,,,,2024-12-24T07:36:51.345Z,2024-12-24T07:36:51.345Z,"aa,et"
+24,9800818589990,1039,825,manual,,,,,2024-12-24T07:37:19.134Z,2024-12-24T07:39:11.743Z,tagsFromStore
