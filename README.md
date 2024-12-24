@@ -113,11 +113,14 @@ List of subscription topics:
 api_version = "2024-04"
 
   [[webhooks.subscriptions]]
-    topics = [
-      "app/uninstalled",
-      "orders/create",
-      "orders/delete",
-      "orders/updated"
-    ]
-  uri = "/webhooks"
+  topics = [ "orders/create", "orders/edited", "orders/updated" ]
+  uri = "/webhooks/app/orders"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
 ```
