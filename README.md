@@ -43,6 +43,12 @@ Using npm:
 npm run dev
 ```
 
+### Deploy and apply changes
+
+```sh
+npm run deploy
+```
+
 ## Database
 
 ### Order Table
